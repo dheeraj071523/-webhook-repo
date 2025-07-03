@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Repo Events</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <h1>GitHub Actions</h1>
+    <div id="logs"></div>
+
+    <script>
+      async function fetchLogs() {
+        const res = await fetch("http://localhost:5000/logs");
+        const data = await res.json();
+        const logsDiv = document.getElementById("logs");
+        logsDiv.innerHTML = data
+          .map((item) => {
+            if (item.event_type === "push") {
+              return `<p><b>${item.author}</b> pushed to <b>${item.to_branch}</b> on ${item.timestamp}</p>`;
+            } else if (item.event_type === "pull_request") {
+              return `<p><b>${item.author}</b> submitted a pull request from <b>${item.from_branch}</b> to <b>${item.to_branch}</b> on ${item.timestamp}</p>`;
+            } else {
+              return `<p>Other event: ${item.event_type}</p>`;
+            }
+          })
+          .join("");
+      }
+
+      setInterval(fetchLogs, 15000);
+      fetchLogs();
+    </script>
+  </body>
+</html>
