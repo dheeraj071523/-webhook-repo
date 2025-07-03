@@ -9,22 +9,32 @@ def webhook():
     payload = request.json
     event_type = request.headers.get('X-GitHub-Event')
 
+   # Shared fields
+    author = payload.get("sender", {}).get("login", "Unknown")
+    timestamp = datetime.utcnow().strftime("%d %B %Y - %I:%M %p UTC")
+
     data = {
-        "event_type": event_type,
-        "timestamp": datetime.utcnow().strftime("%d %B %Y - %I:%M %p UTC"),
-        "author": payload.get("sender", {}).get("login", "Unknown")
+        "author": author,
+        "action": event_type,
+        "timestamp": timestamp,
+        "from_branch": None,
+        "to_branch": None,
+        "request_id": None,
     }
 
-    if event_type == "push":
+    if event_type == "PUSH":
         data["to_branch"] = payload.get("ref", "").split("/")[-1]
-    elif event_type == "pull_request":
-        pr = payload["pull_request"]
-        data["from_branch"] = pr["head"]["ref"]
-        data["to_branch"] = pr["base"]["ref"]
-    elif event_type == "merge":
-        # GitHub doesn't send a separate merge event. Bonus if implemented manually
+        data["request_id"] = payload.get("head_commit", {}).get("id", "UNKNOWN")[:7]
+    elif event_type == "PULL_REQUEST":
+        pr = payload.get("pull_request", {})
+        data["from_branch"] = pr.get("head", {}).get("ref")
+        data["to_branch"] = pr.get("base", {}).get("ref")
+        data["request_id"] = str(pr.get("id", "UNKNOWN"))
+    elif event_type == "MERGE":
+        # Optional: Add custom logic for merges (GitHub doesn't send "merge" as an event)
+        # You'd need to infer from a merged PR or from push to a protected branch
         pass
-
+        
     events.insert_one(data)
     return jsonify({"msg": "Event stored!"}), 200
 
